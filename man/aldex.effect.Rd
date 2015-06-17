@@ -6,6 +6,7 @@
     determines the median difference between the two groups
     determines the median variation within each two group
     determines the effect size, which is the median of the ratio of the between group difference and the larger of the variance within groups
+	ALDEx2 uses the mean absolute difference (http://en.wikipedia.org/wiki/Mean_absolute_difference) as the distance metric for both within and between group differences. This is a consistent and unbiased estimate of the difference between distributions
 }
 \usage{
 aldex.effect(clr, conditions, verbose = TRUE, include.sample.summary = FALSE, useMC=FALSE)
