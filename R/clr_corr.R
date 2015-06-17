@@ -13,12 +13,6 @@
 aldex.corr <- function(clr, covar){ 
   # covar is the continuous variable with which to run correlations
   
-#  # get dimentions, names, etc from the input data
-#  smpl.ids <- names(clr)
-#  feature.number <- length(clr[[1]][,1])
-#  mc.instances <- length(clr[[1]][1,])
-#  feature.names <- rownames(clr[[1]])
-
   # get dimensions, names, etc from the input data
   smpl.ids <- getSampleIDs(clr)
   feature.number <- numFeatures(clr)
