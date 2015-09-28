@@ -1,3 +1,8 @@
+CHANGES IN VERSION 0.99.3
+-------------------------
+
+    o added zero-removal per each condition thereby centring the data on actual counts and not the prior for high zero frequency datasts.
+
 CHANGES IN VERSION 0.99.2
 -------------------------
 

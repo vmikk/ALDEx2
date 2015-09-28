@@ -4,7 +4,7 @@
 #  this function generates the centre log-ratio transform of Monte-Carlo instances
 #  drawn from the Dirichlet distribution.
 
-aldex.clr.function <- function( reads, conds mc.samples=128, zero=FALSE, verbose=FALSE, useMC=FALSE, summarizedExperiment=NULL ) {
+aldex.clr.function <- function( reads, conds, mc.samples=128, zero=FALSE, verbose=FALSE, useMC=FALSE, summarizedExperiment=NULL ) {
 
 # INPUT
 # The 'reads' data.frame MUST have row
@@ -89,38 +89,38 @@ if (summarizedExperiment) {
     prior <- 0.5
 
 
-	# Computes zero removal for each set provided the zero flag is set
+	# Computes zero removal for each condition provided the zero flag is set
 	# Stores the results into a list that can be condensed in the end
+	# Only affects data with numerous zeroes for each condition
 	if(zero)	# Compute the Zero-Removal for the reads 
 	{
 	
 		condition.list <- vector("list", length(unique(conds)))	# list to store conditions
 		zero.result <- vector("list", length(unique(conds)))	# list to hold result
 	
-	
 		# Iterate through the conditions
 		for (i in 1:length(unique(conds)))
 		{
-			condition.list[[i]] <- which(conds == unique(conds)[i])
-			set <- reads[,condition.list[[i]]]		# Subset reads to each condition
+			condition.list[[i]] <- which(conds == unique(conds)[i]) #Cond list
+			set <- reads[,condition.list[[i]]]	# Subset reads to each condition
 			set.sum <- as.numeric(apply(set, 1, sum))	# Sum the features
 			set <- as.data.frame(set[(which(set.sum > minsum)),])	# Remove 0 count features
-			set[set==0] <- prior		# introduce prior
+			set[set==0] <- prior		# introduce prior per set of conditions
 			s.rn <- rownames(set)		# Save rownames for lapply
 			s.cn <- colnames(set)		# Save colnames for lapply 
 			
 			p.set <- lapply( set, function(col) { q <- t( rdirichlet( mc.samples,
 				col)); rownames(q) <- s.rn; q})
 	
-				set.gmean <- lapply(p.set, function(m){ apply(log2(m), 2, function(col)
+			set.gmean <- lapply(p.set, function(m){ apply(log2(m), 2, function(col)
 				{ mean ( col) } ) } )
 			
 			zero.result[[i]] <- set.gmean	# Results are stored in the zero.result 
-		}	
+		}
 		
 		# Put the results in a tangible format for centering 
 		set.rev <- NULL		
-	
+		
 		for (j in 1:length(zero.result))
 		{
 			set.rev <- as.list( c(set.rev, zero.result[[j]]))
@@ -202,7 +202,7 @@ if (verbose == TRUE) print("dirichlet samples complete")
 	}
 	else	# Apply the zero-transformation in this case instead of normal CLR
 	{
-		# Check if you can do parallel apply here
+		# Potential spot for parallelising algorithm
 		print("Computing values for zero-removal centering.")
 		p.copy <- p
   		for (i in 1:length(set.rev))
@@ -218,7 +218,6 @@ if (verbose == TRUE) print("dirichlet samples complete")
   		# p.clr <- aldex.clr.function(reads, conds, 128, TRUE,TRUE,TRUE,FALSE)
 	}	
 	
-    
     # sanity check on data
     for ( i in 1:length(l2p) ) {
         if ( any( ! is.finite( l2p[[i]] ) ) ) stop("non-finite log-frequencies were unexpectedly computed")
@@ -251,8 +250,8 @@ setMethod("numConditions", signature(.object="aldex.clr"), function(.object) len
 
 setMethod("getMonteCarloReplicate", signature(.object="aldex.clr",i="numeric"), function(.object,i) .object@analysisData[[i]])
 
-setMethod("aldex.clr", signature(reads="data.frame"), function(reads, mc.samples=128, verbose=FALSE, useMC=FALSE) aldex.clr.function(reads, mc.samples, verbose, useMC, summarizedExperiment=FALSE))
+setMethod("aldex.clr", signature(reads="data.frame"), function(reads, conds, mc.samples=128, zero=FALSE, verbose=FALSE, useMC=FALSE) aldex.clr.function(reads, conds, mc.samples, zero, verbose, useMC, summarizedExperiment=FALSE))
 
-setMethod("aldex.clr", signature(reads="RangedSummarizedExperiment"), function(reads, mc.samples=128, verbose=FALSE, useMC=FALSE) aldex.clr.function(reads, mc.samples, verbose, useMC, summarizedExperiment=TRUE))
+setMethod("aldex.clr", signature(reads="RangedSummarizedExperiment"), function(reads, conds, mc.samples=128, zero=FALSE, verbose=FALSE, useMC=FALSE) aldex.clr.function(reads, conds, mc.samples, zero, verbose, useMC, summarizedExperiment=TRUE))
 
 

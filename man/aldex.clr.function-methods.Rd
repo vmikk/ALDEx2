@@ -12,7 +12,7 @@
     This is the input for all further analyses.
 }
 \usage{
-	aldex.clr(reads, conditions, mc.samples = 128, zero=TRUE, verbose = FALSE, useMC=FALSE)
+	aldex.clr(reads, conditions, mc.samples = 128, zero=FALSE, verbose = FALSE, useMC=FALSE)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
