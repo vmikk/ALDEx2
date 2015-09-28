@@ -4,7 +4,7 @@
 #  this function generates the centre log-ratio transform of Monte-Carlo instances
 #  drawn from the Dirichlet distribution.
 
-aldex.clr.function <- function( reads, mc.samples=128, verbose=FALSE, useMC=FALSE, summarizedExperiment=NULL ) {
+aldex.clr.function <- function( reads, conds mc.samples=128, zero=FALSE, verbose=FALSE, useMC=FALSE, summarizedExperiment=NULL ) {
 
 # INPUT
 # The 'reads' data.frame MUST have row
@@ -40,6 +40,7 @@ if (summarizedExperiment) {
     # make sure that the multicore package is in scope and return if available 
     has.BiocParallel <- FALSE
     has.parallel <- FALSE
+    
     if ("BiocParallel" %in% rownames(installed.packages()) & useMC){
         print("multicore environment is is OK -- using the BiocParallel package")
         require(BiocParallel)
@@ -86,7 +87,49 @@ if (summarizedExperiment) {
     # this should be by a Count Zero Multiplicative approach, but in practice
     # this is not necessary because of the large number of features
     prior <- 0.5
-    reads[reads==0] <- prior
+
+
+	# Computes zero removal for each set provided the zero flag is set
+	# Stores the results into a list that can be condensed in the end
+	if(zero)	# Compute the Zero-Removal for the reads 
+	{
+	
+		condition.list <- vector("list", length(unique(conds)))	# list to store conditions
+		zero.result <- vector("list", length(unique(conds)))	# list to hold result
+	
+	
+		# Iterate through the conditions
+		for (i in 1:length(unique(conds)))
+		{
+			condition.list[[i]] <- which(conds == unique(conds)[i])
+			set <- reads[,condition.list[[i]]]		# Subset reads to each condition
+			set.sum <- as.numeric(apply(set, 1, sum))	# Sum the features
+			set <- as.data.frame(set[(which(set.sum > minsum)),])	# Remove 0 count features
+			set[set==0] <- prior		# introduce prior
+			s.rn <- rownames(set)		# Save rownames for lapply
+			s.cn <- colnames(set)		# Save colnames for lapply 
+			
+			p.set <- lapply( set, function(col) { q <- t( rdirichlet( mc.samples,
+				col)); rownames(q) <- s.rn; q})
+	
+				set.gmean <- lapply(p.set, function(m){ apply(log2(m), 2, function(col)
+				{ mean ( col) } ) } )
+			
+			zero.result[[i]] <- set.gmean	# Results are stored in the zero.result 
+		}	
+		
+		# Put the results in a tangible format for centering 
+		set.rev <- NULL		
+	
+		for (j in 1:length(zero.result))
+		{
+			set.rev <- as.list( c(set.rev, zero.result[[j]]))
+		}
+	}
+
+	# Save the original reads prior to addition of the prior
+	reads.original <- reads
+    reads[reads==0] <- prior	# Can experiment with CZM from zCompositions here
 
 if (verbose == TRUE) print("data format is OK")
 
@@ -135,25 +178,46 @@ if (verbose == TRUE) print("dirichlet samples complete")
     # ---------------------------------------------------------------------
     # Take the log2 of the frequency and subtract the geometric mean log2 frequency per sample
     # i.e., do a centered logratio transformation as per Aitchison
-    
-    #apply the function over elements in a list, that contains an array
-    if (has.BiocParallel){
-        l2p <- bplapply( p, function(m) {
-            apply( log2(m), 2, function(col) { col - mean(col) } )
-        })
-        names(l2p) <- names(p)
-    }
-    else if (has.parallel){
-        l2p <- mclapply( p, function(m) {
-            apply( log2(m), 2, function(col) { col - mean(col) } )
-        },mc.cores=getOption("mc.cores", detectCores() ))
-        
-    }
-    else{
-        l2p <- lapply( p, function(m) {
-            apply( log2(m), 2, function(col) { col - mean(col) } )
-        })
-    }
+
+    if (zero == FALSE)
+    {
+	    #apply the function over elements in a list, that contains an array
+	    if (has.BiocParallel){
+	        l2p <- bplapply( p, function(m) {
+	            apply( log2(m), 2, function(col) { col - mean(col) } )
+	        })
+	        names(l2p) <- names(p)
+	    }
+	    else if (has.parallel){
+	        l2p <- mclapply( p, function(m) {
+	            apply( log2(m), 2, function(col) { col - mean(col) } )
+	        },mc.cores=getOption("mc.cores", detectCores() ))
+	        
+	    }
+	    else{
+	        l2p <- lapply( p, function(m) {
+	            apply( log2(m), 2, function(col) { col - mean(col) } )
+	        })
+	    }
+	}
+	else	# Apply the zero-transformation in this case instead of normal CLR
+	{
+		# Check if you can do parallel apply here
+		print("Computing values for zero-removal centering.")
+		p.copy <- p
+  		for (i in 1:length(set.rev))
+  		{
+			p.copy[[i]] <- as.data.frame(p.copy[[i]])
+			p[[i]] <- apply(log2(p.copy[[i]]),1, function(x){ x - (set.rev[[i]])})
+			p[[i]] <- t(p[[i]])
+			print(i)
+  		}
+  		l2p <- p	# Save the set in order to generate the aldex.clr variable
+
+  		# Invocation to get the clr data
+  		# p.clr <- aldex.clr.function(reads, conds, 128, TRUE,TRUE,TRUE,FALSE)
+	}	
+	
     
     # sanity check on data
     for ( i in 1:length(l2p) ) {
