@@ -45,7 +45,7 @@ aldex.effect(clr, conditions, verbose = TRUE, include.sample.summary = FALSE, us
     \item{diff.btw}{
         a vector containing the per-feature median difference between condition A and B
     }
-    \item{diff.btw}{
+    \item{diff.win}{
         a vector containing the per-feature maximum median difference between Dirichlet instances within conditions
     }
     \item{effect}{
